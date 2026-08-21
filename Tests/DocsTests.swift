@@ -5,6 +5,8 @@ import Testing
 struct DocsTests {
     @Test func readmeDescribesTheCurrentProduct() throws {
         let readme = try Self.text("README.md")
+        #expect(readme.contains("Raycast is bloated and slow"))
+        #expect(readme.contains("buggy, opinionated, and not customizable"))
         #expect(readme.contains("⌥Space"))
         #expect(readme.contains("Remappable"))
         #expect(readme.contains("Olive"))
@@ -12,16 +14,19 @@ struct DocsTests {
         #expect(readme.contains("Orchid"))
         #expect(readme.contains("Parchment"))
         #expect(readme.contains("result highlight"))
-        #expect(readme.contains("Show on all screens"))
-        #expect(readme.contains("off** by default") || readme.contains("**off** by default"))
-        #expect(readme.contains("math and currency") || readme.contains("Math"))
-        #expect(readme.contains("on** by default") || readme.contains("**on** by default"))
+        #expect(readme.contains("all screens"))
+        #expect(readme.contains("**off** by default"))
+        #expect(readme.contains("currency"))
+        #expect(readme.contains("**on** by default"))
         #expect(readme.contains("left-click opens Settings"))
         #expect(readme.contains("already-running instance"))
         #expect(readme.contains("macOS 15"))
         #expect(readme.contains("external disks"))
         #expect(readme.contains("every hour"))
-        #expect(readme.contains("MIT"))
+        #expect(readme.contains("[MIT](LICENSE)"))
+        #expect(!readme.contains("Build & run"))
+        #expect(!readme.contains("xcodebuild"))
+        #expect(!readme.contains("| Action |"))
     }
 
     @Test func repoIncludesMitLicense() throws {
@@ -54,7 +59,7 @@ struct DocsTests {
 
     @Test func agentsKeepsArchitectureOutOfTheReadme() throws {
         let agents = try Self.text("AGENTS.md")
-        #expect(agents.contains("README is product, usage, and build only"))
+        #expect(agents.contains("README is a short product page"))
         #expect(agents.contains("ro.randusoft.velox"))
         #expect(agents.contains("math, then currency"))
         #expect(agents.contains("Everyday Apple apps"))

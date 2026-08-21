@@ -46,7 +46,7 @@ Velox/
   AGENTS.md
 ```
 
-README is product, usage, and build only. Architecture and this layout tree belong here. Keep both files in sync when the product surface or folder layout changes
+README is a short product page. Architecture and this layout tree belong here. Keep both files in sync when the product surface or folder layout changes
 
 `Tests/` is a Swift Testing target hosted by Velox. One file per scope:
 
