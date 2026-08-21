@@ -2,6 +2,8 @@
 
 Tiny, native Spotlight replacement for macOS
 
+![Velox](.github/screenshot.jpg)
+
 Raycast is bloated and slow. Apple's Spotlight is buggy, opinionated, and not customizable. Velox keeps Spotlight's feel: a floating panel, collapsed until you type, keyboard-first. It only borrows from Raycast when that makes app search, math, or currency faster
 
 ## Features

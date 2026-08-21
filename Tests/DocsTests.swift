@@ -24,6 +24,7 @@ struct DocsTests {
         #expect(readme.contains("external disks"))
         #expect(readme.contains("every hour"))
         #expect(readme.contains("[MIT](LICENSE)"))
+        #expect(readme.contains(".github/screenshot.jpg"))
         #expect(!readme.contains("Build & run"))
         #expect(!readme.contains("xcodebuild"))
         #expect(!readme.contains("| Action |"))
