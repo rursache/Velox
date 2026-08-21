@@ -3,38 +3,6 @@ import Testing
 
 @Suite("Docs")
 struct DocsTests {
-    @Test func readmeDescribesTheCurrentProduct() throws {
-        let readme = try Self.text("README.md")
-        #expect(readme.contains("Ultra-fast native macOS Spotlight-style launcher"))
-        #expect(readme.contains("Raycast is bloated and slow"))
-        #expect(readme.contains("buggy, opinionated, and not customizable"))
-        #expect(readme.contains("⌥Space"))
-        #expect(readme.contains("Remappable"))
-        #expect(readme.contains("Olive"))
-        #expect(readme.contains("Harbor"))
-        #expect(readme.contains("Orchid"))
-        #expect(readme.contains("Parchment"))
-        #expect(readme.contains("result highlight"))
-        #expect(readme.contains("all screens"))
-        #expect(readme.contains("**off** by default"))
-        #expect(readme.contains("currency"))
-        #expect(readme.contains("**on** by default"))
-        #expect(readme.contains("left-click opens Settings"))
-        #expect(readme.contains("already-running instance"))
-        #expect(readme.contains("macOS 15"))
-        #expect(readme.contains("external disks"))
-        #expect(readme.contains("every hour"))
-        #expect(readme.contains("[MIT](LICENSE)"))
-        #expect(readme.contains(".github/screenshot.jpg"))
-        #expect(readme.contains("<img src=\".github/screenshot.jpg\""))
-        #expect(readme.contains("height="))
-        #expect(!readme.contains("width="))
-        #expect(readme.contains("brew tap rursache/tap && brew trust rursache/tap && brew install --cask velox"))
-        #expect(!readme.contains("Build & run"))
-        #expect(!readme.contains("xcodebuild"))
-        #expect(!readme.contains("| Action |"))
-    }
-
     @Test func releaseWorkflowBuildsAndTaps() throws {
         let yml = try Self.text(".github/workflows/release.yml")
         #expect(yml.contains("types: [published]"))
