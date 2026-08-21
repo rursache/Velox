@@ -5,6 +5,7 @@ import Testing
 struct DocsTests {
     @Test func readmeDescribesTheCurrentProduct() throws {
         let readme = try Self.text("README.md")
+        #expect(readme.contains("Ultra-fast native macOS Spotlight-style launcher"))
         #expect(readme.contains("Raycast is bloated and slow"))
         #expect(readme.contains("buggy, opinionated, and not customizable"))
         #expect(readme.contains("⌥Space"))
