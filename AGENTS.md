@@ -57,6 +57,7 @@ README is a short product page. Architecture and this layout tree belong here. K
 - `DocsTests`
 - `FuzzyMatcherTests`
 - `KeyShortcutTests`
+- `LaunchAtLoginTests`
 - `MathEngineTests`
 - `PanelAlignmentTests`
 - `SearchEngineTests`
@@ -74,6 +75,7 @@ Do not add a standalone Tools script that reimplements production code
 - Not App Sandboxed. Hardened Runtime stays on. There is no App Sandbox capability on the Velox target
 - `main.swift` posts that notification and exits when another Velox PID is already running. Dock reopen and the same notification re-show Settings if it is open, otherwise the panel
 - Carbon hotkey comes from `Preferences.openShortcut` (default Option+Space) and is remappable. Suspend it while the Settings recorder is capturing
+- `launchAtLogin` defaults on and registers `SMAppService.mainApp` at launch. The Settings Search header is a Start at login toggle. Test hosts skip the system login item
 - Menu-bar left-click opens Settings. The status item icon stays a magnifying glass. Only the search-field icon morphs to a gear on hover
 - Everyday Apple apps in `/System/Applications` and Cryptex (Safari, Notes, Mail) stay visible. Finder stays visible. CoreServices extras are indexed but hidden until `includeSystemApps` is on
 - Bar theme and result highlight are separate. Default bar is Glass. Saved `spotlight` maps to Glass, `frost` to Snow, `graphite` to Midnight. Extra tints: Olive, Harbor, Orchid, Parchment. Light bars force light appearance so query text stays readable. Highlight is Accent, Soft, or Contrast. Theme, highlight, and radius apply live. Settings preview parks when Settings resigns key so it does not stay above other apps

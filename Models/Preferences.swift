@@ -30,6 +30,13 @@ final class Preferences: ObservableObject {
         didSet { defaults.set(currencyEnabled, forKey: Keys.currencyEnabled) }
     }
 
+    @Published var launchAtLogin: Bool {
+        didSet {
+            defaults.set(launchAtLogin, forKey: Keys.launchAtLogin)
+            LaunchAtLogin.apply(launchAtLogin)
+        }
+    }
+
     @Published var openShortcut: KeyShortcut {
         didSet {
             defaults.set(Int(openShortcut.keyCode), forKey: Keys.openHotKeyCode)
@@ -103,6 +110,7 @@ final class Preferences: ObservableObject {
         showPathInSubtitle = defaults.object(forKey: Keys.showPathInSubtitle) as? Bool ?? Constants.Defaults.showPathInSubtitle
         mathEnabled = defaults.object(forKey: Keys.mathEnabled) as? Bool ?? Constants.Defaults.mathEnabled
         currencyEnabled = defaults.object(forKey: Keys.currencyEnabled) as? Bool ?? Constants.Defaults.currencyEnabled
+        launchAtLogin = defaults.object(forKey: Keys.launchAtLogin) as? Bool ?? Constants.Defaults.launchAtLogin
         if defaults.object(forKey: Keys.openHotKeyCode) != nil {
             openShortcut = KeyShortcut(
                 keyCode: UInt32(defaults.integer(forKey: Keys.openHotKeyCode)),
@@ -134,6 +142,7 @@ final class Preferences: ObservableObject {
             Keys.showPathInSubtitle: Constants.Defaults.showPathInSubtitle,
             Keys.mathEnabled: Constants.Defaults.mathEnabled,
             Keys.currencyEnabled: Constants.Defaults.currencyEnabled,
+            Keys.launchAtLogin: Constants.Defaults.launchAtLogin,
             Keys.themeID: Constants.Defaults.themeID.rawValue,
             Keys.highlightID: Constants.Defaults.highlightID.rawValue,
             Keys.panelCornerRadius: Double(Constants.Defaults.panelCornerRadius),

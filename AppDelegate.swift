@@ -11,6 +11,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         MainActor.assumeIsolated {
             Preferences.shared.registerDefaults()
+            LaunchAtLogin.apply(Preferences.shared.launchAtLogin)
             // LSUIElement apps have no default Edit menu — without it Cmd+A/C/V/X/Z never fire
             installMainMenu()
             panelController = SearchPanelController(

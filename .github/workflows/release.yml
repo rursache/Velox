@@ -63,6 +63,14 @@ jobs:
         with:
           app-path: build/Build/Products/Release/Velox.app
 
+      - name: Verify Developer ID signature and staple
+        run: |
+          APP="build/Build/Products/Release/Velox.app"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          codesign -dv --verbose=2 "$APP" 2>&1 | grep -E 'Authority=Developer ID Application'
+          xcrun stapler validate "$APP"
+          spctl --assess --type exec -vv "$APP"
+
       - name: Package .app into a zip
         id: pkg
         run: |
@@ -74,6 +82,11 @@ jobs:
           echo "$SHA  $ZIP" > checksums.txt
           echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
           ls -la "$ZIP" checksums.txt
+          CHECK="$RUNNER_TEMP/velox-zip-check"
+          mkdir -p "$CHECK"
+          ditto -x -k "$ZIP" "$CHECK"
+          xcrun stapler validate "$CHECK/Velox.app"
+          spctl --assess --type exec -vv "$CHECK/Velox.app"
 
       - name: Upload artifacts to GitHub Release
         uses: softprops/action-gh-release@v3

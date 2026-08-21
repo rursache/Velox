@@ -8,6 +8,10 @@ enum SettingsFooter {
     static let leading = [rebuildIndex, resetPosition]
 }
 
+enum SettingsSearchCard {
+    static let launchAtLogin = "Start at login"
+}
+
 enum SettingsChrome {
     static let pagePadding: CGFloat = 12
     static let cardPadding: CGFloat = 10
@@ -76,7 +80,13 @@ struct SettingsRootView: View {
     }
 
     private var searchCard: some View {
-        settingsCard(title: "Search", icon: "magnifyingglass", tint: .blue) {
+        settingsCard {
+            symbolRow(icon: "power", tint: .blue, title: SettingsSearchCard.launchAtLogin) {
+                Toggle("", isOn: $prefs.launchAtLogin)
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .controlSize(.small)
+            }
             symbolRow(icon: "list.number", tint: .blue, title: "Max app results") {
                 Stepper(value: $prefs.maxResults, in: Constants.Defaults.maxResultsRange) {
                     Text("\(prefs.maxResults)")
@@ -190,20 +200,22 @@ struct SettingsRootView: View {
     }
 
     private func settingsCard<Content: View>(
-        title: String,
-        icon: String,
-        tint: Color,
+        title: String? = nil,
+        icon: String? = nil,
+        tint: Color = .blue,
         @ViewBuilder content: () -> Content
     ) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 22, height: 22)
-                    .background(tint.gradient, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
-                Text(title)
-                    .font(.system(size: 13, weight: .semibold))
+            if let title, let icon {
+                HStack(spacing: 8) {
+                    Image(systemName: icon)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 22, height: 22)
+                        .background(tint.gradient, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    Text(title)
+                        .font(.system(size: 13, weight: .semibold))
+                }
             }
             content()
         }

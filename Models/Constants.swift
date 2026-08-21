@@ -18,6 +18,7 @@ enum Constants {
         static let showPathInSubtitle = false
         static let mathEnabled = true
         static let currencyEnabled = true
+        static let launchAtLogin = true
         static let openShortcut = KeyShortcut.optionSpace
         static let themeID = ThemeID.glass
         static let highlightID = HighlightID.accent
@@ -35,6 +36,7 @@ enum Constants {
         static let showPathInSubtitle = "showPathInSubtitle"
         static let mathEnabled = "mathEnabled"
         static let currencyEnabled = "currencyEnabled"
+        static let launchAtLogin = "launchAtLogin"
         static let panelOriginX = "panelOriginX"
         static let panelMaxY = "panelMaxY"
         static let hasCustomPanelPosition = "hasCustomPanelPosition"

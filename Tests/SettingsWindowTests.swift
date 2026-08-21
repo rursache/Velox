@@ -163,6 +163,11 @@ struct SettingsWindowTests {
         #expect(SettingsFooter.rebuildIndex == "Rebuild App Index")
         #expect(SettingsFooter.resetPosition == "Reset Position")
     }
+
+    @Test func searchCardStartsWithLoginToggle() {
+        #expect(SettingsSearchCard.launchAtLogin == "Start at login")
+        #expect(Constants.Defaults.launchAtLogin)
+    }
 }
 
 @Suite("App version")
@@ -179,7 +184,7 @@ struct AppVersionTests {
     @Test func liveBundleMatchesInfoPlist() {
         let short = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
         let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
-        #expect(short == "1.0.0")
+        #expect(short == "1.0.1")
         let expected = AppVersion.label(short: short, build: build)
         #expect(AppVersion.label() == expected)
         #expect(AppVersion.label().hasPrefix("v"))
@@ -202,8 +207,10 @@ struct ConstantsTests {
     @Test func mathAndCurrencyAreOnByDefault() {
         #expect(Constants.Defaults.mathEnabled)
         #expect(Constants.Defaults.currencyEnabled)
+        #expect(Constants.Defaults.launchAtLogin)
         #expect(Constants.PreferenceKey.mathEnabled == "mathEnabled")
         #expect(Constants.PreferenceKey.currencyEnabled == "currencyEnabled")
+        #expect(Constants.PreferenceKey.launchAtLogin == "launchAtLogin")
     }
 
     @Test func maxResultsDefaultIsSpotlightLike() {
