@@ -6,6 +6,12 @@ Ultra-fast native macOS Spotlight-style launcher
 
 Raycast is bloated and slow. Apple's Spotlight is buggy, opinionated, and not customizable. Velox keeps Spotlight's feel: a floating panel, collapsed until you type, keyboard-first. It only borrows from Raycast when that makes app search, math, or currency faster
 
+## Install
+
+```bash
+brew tap rursache/tap && brew trust rursache/tap && brew install --cask velox
+```
+
 ## Features
 
 - Instant fuzzy app search (`gc` → Google Chrome) across `/Applications`, `~/Applications`, system apps, and `/Applications` on attached external disks
@@ -16,12 +22,6 @@ Raycast is bloated and slow. Apple's Spotlight is buggy, opinionated, and not cu
 - Menu bar left-click opens Settings. A second launch shows the already-running instance
 
 Requires macOS 15. Extra Apple system apps stay **off** by default. Everyday apps like Safari stay visible
-
-## Install
-
-```bash
-brew install rursache/tap/velox
-```
 
 ## License
 

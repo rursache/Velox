@@ -29,7 +29,7 @@ struct DocsTests {
         #expect(readme.contains("<img src=\".github/screenshot.jpg\""))
         #expect(readme.contains("height="))
         #expect(!readme.contains("width="))
-        #expect(readme.contains("brew install rursache/tap/velox"))
+        #expect(readme.contains("brew tap rursache/tap && brew trust rursache/tap && brew install --cask velox"))
         #expect(!readme.contains("Build & run"))
         #expect(!readme.contains("xcodebuild"))
         #expect(!readme.contains("| Action |"))
