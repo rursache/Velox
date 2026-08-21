@@ -25,9 +25,21 @@ struct DocsTests {
         #expect(readme.contains("every hour"))
         #expect(readme.contains("[MIT](LICENSE)"))
         #expect(readme.contains(".github/screenshot.jpg"))
+        #expect(readme.contains("brew install rursache/tap/velox"))
         #expect(!readme.contains("Build & run"))
         #expect(!readme.contains("xcodebuild"))
         #expect(!readme.contains("| Action |"))
+    }
+
+    @Test func releaseWorkflowBuildsAndTaps() throws {
+        let yml = try Self.text(".github/workflows/release.yml")
+        #expect(yml.contains("types: [published]"))
+        #expect(yml.contains("Velox.app"))
+        #expect(yml.contains("macos-26"))
+        #expect(yml.contains("RanduSoft/macos-signing"))
+        #expect(yml.contains("update-formula.yml"))
+        #expect(yml.contains("formula: 'velox'"))
+        #expect(yml.contains("Velox-${VERSION}.zip") || yml.contains("zip=Velox-"))
     }
 
     @Test func repoIncludesMitLicense() throws {
@@ -64,6 +76,8 @@ struct DocsTests {
         #expect(agents.contains("ro.randusoft.velox"))
         #expect(agents.contains("math, then currency"))
         #expect(agents.contains("Everyday Apple apps"))
+        #expect(agents.contains(".github/workflows/release.yml"))
+        #expect(agents.contains("homebrew-tap"))
     }
 
     private static func text(_ fileName: String) throws -> String {

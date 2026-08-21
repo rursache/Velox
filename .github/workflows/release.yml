@@ -1,0 +1,101 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g. v1.2.3)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Resolve tag and version
+        id: meta
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.tag }}"
+          else
+            TAG="${{ github.event.release.tag_name }}"
+          fi
+          VERSION="${TAG#v}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "zip=Velox-${VERSION}.zip" >> "$GITHUB_OUTPUT"
+
+      - name: Select Xcode 26.4
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.4.app/Contents/Developer
+          xcodebuild -version
+          xcodebuild -showsdks | grep macosx || true
+
+      - name: Build Velox.app (Release, unsigned)
+        run: |
+          xcodebuild \
+            -project Velox.xcodeproj \
+            -scheme Velox \
+            -configuration Release \
+            -destination 'generic/platform=macOS' \
+            -derivedDataPath build \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Fetch signing toolkit
+        uses: actions/checkout@v5
+        with:
+          repository: RanduSoft/macos-signing
+          token: ${{ secrets.SIGNING_PAT }}
+          path: .signing
+
+      - name: Sign, notarize and staple
+        uses: ./.signing
+        with:
+          app-path: build/Build/Products/Release/Velox.app
+
+      - name: Package .app into a zip
+        id: pkg
+        run: |
+          APP="build/Build/Products/Release/Velox.app"
+          test -d "$APP" || { echo "App bundle missing at $APP"; exit 1; }
+          ZIP="${{ steps.meta.outputs.zip }}"
+          ditto -c -k --keepParent "$APP" "$ZIP"
+          SHA=$(shasum -a 256 "$ZIP" | awk '{print $1}')
+          echo "$SHA  $ZIP" > checksums.txt
+          echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
+          ls -la "$ZIP" checksums.txt
+
+      - name: Upload artifacts to GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          files: |
+            ${{ steps.meta.outputs.zip }}
+            checksums.txt
+
+      - name: Trigger Homebrew tap update
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.TAP_GITHUB_TOKEN }}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: 'rursache',
+              repo: 'homebrew-tap',
+              workflow_id: 'update-formula.yml',
+              ref: 'master',
+              inputs: {
+                formula: 'velox',
+                tag: '${{ steps.meta.outputs.tag }}',
+                repository: context.repo.owner + '/' + context.repo.repo
+              }
+            })

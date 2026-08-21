@@ -17,6 +17,12 @@ Raycast is bloated and slow. Apple's Spotlight is buggy, opinionated, and not cu
 
 Requires macOS 15. Extra Apple system apps stay **off** by default. Everyday apps like Safari stay visible
 
+## Install
+
+```bash
+brew install rursache/tap/velox
+```
+
 ## License
 
 [MIT](LICENSE)

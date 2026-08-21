@@ -41,6 +41,7 @@ Velox/
   UI/
   Tests/
   Icon.icon/
+  .github/workflows/release.yml
   Velox.xcodeproj/
   README.md
   AGENTS.md
@@ -79,6 +80,7 @@ Do not add a standalone Tools script that reimplements production code
 - `PanelScreenPolicy` default is the screen with the mouse. `allScreens` keeps the key panel on the mouse screen and mirrors factory-positioned replicas on the others. Preview mode never clones
 - Query order is math, then currency parse + convert, then apps. `mathEnabled` and `currencyEnabled` default on and skip that source when off. An empty query must not hop `AppIndex`. Currency must parse before any actor hop, and must not hit the network on a keystroke or when currency is off. Rates refresh on launch and every hour
 - App scan roots are rebuilt every index pass. Include `/Applications` on local non-boot volumes only. Skip network volumes before touching disk. Missing folders are a no-op. Volume mount/unmount/rename triggers a rebuild. Search drops `/Volumes/` hits whose files are gone so ejected disks do not linger
+- A published GitHub release builds unsigned Release, signs and notarizes via `RanduSoft/macos-signing`, uploads `Velox-<version>.zip` plus `checksums.txt`, then dispatches `rursache/homebrew-tap` `update-formula.yml` for the `velox` cask
 
 ## After every change
 
