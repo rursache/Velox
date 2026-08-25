@@ -72,7 +72,7 @@ enum Constants {
     enum Index {
         static let folderDebounce: TimeInterval = 1.5
         static let periodicRefresh: TimeInterval = 120
-        static let panelShowMaxAge: TimeInterval = 30
+        static let panelShowMaxAge: TimeInterval = 120
     }
 
     enum Currency {

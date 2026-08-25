@@ -214,6 +214,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     }
                 }
             }
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(handleIndexReady),
+                name: .veloxIndexReady,
+                object: nil
+            )
         }
         refreshFolderWatcher()
     }
@@ -317,11 +323,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    @objc private func handleIndexReady() {
+        MainActor.assumeIsolated { refreshFolderWatcher() }
+    }
+
     @objc private func rebuildIndex() {
-        Task { @MainActor in
-            await AppIndex.shared.rebuild()
-            refreshFolderWatcher()
-        }
+        Task { await AppIndex.shared.rebuild() }
     }
 
     @objc private func handleShowRequest() {

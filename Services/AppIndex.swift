@@ -10,11 +10,31 @@ actor AppIndex {
     private(set) var isReady = false
     private(set) var lastRebuildAt: Date?
     private var rebuildGeneration: UInt64 = 0
+    private var rebuildTask: Task<Void, Never>?
+    private var queuedRebuild = false
 
     func rebuild() async {
+        if let rebuildTask {
+            queuedRebuild = true
+            await rebuildTask.value
+            return
+        }
+        queuedRebuild = false
+        let task = Task { await self.performRebuild() }
+        rebuildTask = task
+        await task.value
+        rebuildTask = nil
+        if queuedRebuild {
+            queuedRebuild = false
+            await rebuild()
+        }
+    }
+
+    private func performRebuild() async {
         rebuildGeneration &+= 1
         let generation = rebuildGeneration
         let started = CFAbsoluteTimeGetCurrent()
+        let previousIDs = Set(apps.map(\.id))
         let discovered = await Task.detached(priority: .userInitiated) {
             MountedVolumeIndex.refresh()
             return AppScanner.scan()
@@ -23,8 +43,10 @@ actor AppIndex {
         apps = discovered
         isReady = true
         lastRebuildAt = Date()
-        await MainActor.run {
-            AppIconCache.removeAll()
+        if previousIDs != Set(apps.map(\.id)) {
+            await MainActor.run {
+                AppIconCache.removeAll()
+            }
         }
         let ms = (CFAbsoluteTimeGetCurrent() - started) * 1000
         print(String(format: "[Velox] Indexed %d apps in %.1f ms", discovered.count, ms))

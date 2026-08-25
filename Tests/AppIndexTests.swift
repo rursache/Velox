@@ -356,7 +356,20 @@ struct AppIndexTests {
         #expect(AppIndexWatchPolicy.panelShowMaxAge == Constants.Index.panelShowMaxAge)
         #expect(AppIndexWatchPolicy.debounceInterval == 1.5)
         #expect(AppIndexWatchPolicy.periodicInterval == 120)
-        #expect(AppIndexWatchPolicy.panelShowMaxAge == 30)
+        #expect(AppIndexWatchPolicy.panelShowMaxAge == 120)
+    }
+
+    @Test func watchPolicySkipsSystemRoots() {
+        #expect(AppIndexWatchPolicy.shouldWatch(URL(fileURLWithPath: "/Applications", isDirectory: true)))
+        #expect(AppIndexWatchPolicy.shouldWatch(UserHome.applicationsDirectory))
+        #expect(AppIndexWatchPolicy.shouldWatch(URL(fileURLWithPath: "/Volumes/SSD/Applications", isDirectory: true)))
+        #expect(!AppIndexWatchPolicy.shouldWatch(URL(fileURLWithPath: "/System/Applications", isDirectory: true)))
+        #expect(!AppIndexWatchPolicy.shouldWatch(
+            URL(fileURLWithPath: "/System/Library/CoreServices/Applications", isDirectory: true)
+        ))
+        #expect(!AppIndexWatchPolicy.shouldWatch(
+            URL(fileURLWithPath: "/System/Cryptexes/App/System/Applications", isDirectory: true)
+        ))
     }
 
     @Test func watchPathsSkipMissingAndDedup() {
@@ -403,10 +416,20 @@ struct AppIndexTests {
 
     @Test func rebuildRecordsTimestamp() async {
         let index = AppIndex()
-        #expect(await index.isStale(now: Date(), maxAge: 30))
+        #expect(await index.isStale(now: Date(), maxAge: 120))
         await index.rebuild()
-        #expect(await !index.isStale(now: Date(), maxAge: 30))
-        #expect(await index.isStale(now: Date().addingTimeInterval(60), maxAge: 30))
+        #expect(await !index.isStale(now: Date(), maxAge: 120))
+        #expect(await index.isStale(now: Date().addingTimeInterval(180), maxAge: 120))
+    }
+
+    @Test func overlappingRebuildsLeaveAPopulatedIndex() async {
+        let index = AppIndex()
+        async let first: Void = index.rebuild()
+        async let second: Void = index.rebuild()
+        _ = await (first, second)
+        let apps = await index.apps
+        #expect(!apps.isEmpty)
+        #expect(await !index.isStale(now: Date(), maxAge: 120))
     }
 
     @Test func folderWatcherKeepsEmptyPathsWithoutStarting() {

@@ -6,6 +6,16 @@ enum AppIndexWatchPolicy {
     static var periodicInterval: TimeInterval { Constants.Index.periodicRefresh }
     static var panelShowMaxAge: TimeInterval { Constants.Index.panelShowMaxAge }
 
+    static func shouldWatch(_ url: URL) -> Bool {
+        let paths = [url.path, url.resolvingSymlinksInPath().path]
+        return paths.allSatisfy { path in
+            !path.hasPrefix("/System/Applications")
+                && !path.hasPrefix("/System/Library/")
+                && !path.hasPrefix("/System/Volumes/Preboot/")
+                && !path.contains("/Cryptexes/")
+        }
+    }
+
     static func watchPaths(
         from roots: [URL],
         exists: (URL) -> Bool = { url in
@@ -16,7 +26,7 @@ enum AppIndexWatchPolicy {
     ) -> [String] {
         var seen = Set<String>()
         return roots.compactMap { url in
-            guard exists(url) else { return nil }
+            guard shouldWatch(url), exists(url) else { return nil }
             let path = url.resolvingSymlinksInPath().path
             guard seen.insert(path).inserted else { return nil }
             return path
@@ -52,11 +62,13 @@ final class AppFolderWatcher {
 
     func start(paths: [String]) {
         stop()
-        watchedPaths = paths
+        var armed: [String] = []
         for path in paths {
             guard let source = Self.makeSource(path: path, handler: handler) else { continue }
             sources.append(source)
+            armed.append(path)
         }
+        watchedPaths = armed
         if !sources.isEmpty {
             NSLog("[Velox] Watching %d app folders", sources.count)
         }
@@ -76,14 +88,18 @@ final class AppFolderWatcher {
         guard fd >= 0 else { return nil }
         let source = DispatchSource.makeFileSystemObjectSource(
             fileDescriptor: fd,
-            eventMask: [.write, .rename, .delete, .extend, .attrib, .link],
-            queue: .main
+            eventMask: [.write, .rename, .delete],
+            queue: eventQueue
         )
-        source.setEventHandler(handler: handler)
+        source.setEventHandler {
+            DispatchQueue.main.async(execute: handler)
+        }
         source.setCancelHandler {
             close(fd)
         }
         source.resume()
         return source
     }
+
+    private static let eventQueue = DispatchQueue(label: "ro.randusoft.velox.folder-watch")
 }

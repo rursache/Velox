@@ -380,6 +380,8 @@ final class SearchPanelController: NSObject, NSWindowDelegate {
             if Preferences.shared.currencyEnabled {
                 await CurrencyService.shared.refreshIfNeeded(trigger: .panelShow)
             }
+        }
+        Task {
             if await AppIndex.shared.isStale() {
                 await AppIndex.shared.rebuild()
             }
