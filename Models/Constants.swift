@@ -69,6 +69,12 @@ enum Constants {
         static var size: CGSize { CGSize(width: width, height: height) }
     }
 
+    enum Index {
+        static let folderDebounce: TimeInterval = 1.5
+        static let periodicRefresh: TimeInterval = 120
+        static let panelShowMaxAge: TimeInterval = 30
+    }
+
     enum Currency {
         static let cacheFileName = "rates.json"
         static let refreshInterval: TimeInterval = 3600

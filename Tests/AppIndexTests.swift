@@ -350,6 +350,73 @@ struct AppIndexTests {
         #expect(VolumeWatcher.notifications.contains(NSWorkspace.didRenameVolumeNotification))
     }
 
+    @Test func watchPolicyUsesFolderDebounceAndPeriodicFallback() {
+        #expect(AppIndexWatchPolicy.debounceInterval == Constants.Index.folderDebounce)
+        #expect(AppIndexWatchPolicy.periodicInterval == Constants.Index.periodicRefresh)
+        #expect(AppIndexWatchPolicy.panelShowMaxAge == Constants.Index.panelShowMaxAge)
+        #expect(AppIndexWatchPolicy.debounceInterval == 1.5)
+        #expect(AppIndexWatchPolicy.periodicInterval == 120)
+        #expect(AppIndexWatchPolicy.panelShowMaxAge == 30)
+    }
+
+    @Test func watchPathsSkipMissingAndDedup() {
+        let applications = URL(fileURLWithPath: "/Applications", isDirectory: true)
+        let home = URL(fileURLWithPath: "/Users/demo/Applications", isDirectory: true)
+        let missing = URL(fileURLWithPath: "/Volumes/Gone/Applications", isDirectory: true)
+        let paths = AppIndexWatchPolicy.watchPaths(
+            from: [applications, applications, home, missing],
+            exists: { $0 != missing }
+        )
+        #expect(paths.count == 2)
+        #expect(Set(paths).count == 2)
+        #expect(paths.contains(applications.resolvingSymlinksInPath().path))
+        #expect(paths.contains(home.resolvingSymlinksInPath().path))
+        #expect(!paths.contains { $0.contains("/Gone/") })
+    }
+
+    @Test func watchPathsIncludeLiveApplicationsRoots() {
+        let paths = AppIndexWatchPolicy.watchPaths(from: AppScanner.scanRoots())
+        let applications = URL(fileURLWithPath: "/Applications").resolvingSymlinksInPath().path
+        #expect(paths.contains(applications))
+        let home = UserHome.applicationsDirectory.resolvingSymlinksInPath().path
+        var isDir: ObjCBool = false
+        if FileManager.default.fileExists(atPath: home, isDirectory: &isDir), isDir.boolValue {
+            #expect(paths.contains(home))
+        }
+    }
+
+    @Test func staleWhenNeverRebuiltOrPastMaxAge() {
+        let now = Date()
+        #expect(AppIndexWatchPolicy.isStale(lastRebuild: nil, now: now, maxAge: 30))
+        #expect(!AppIndexWatchPolicy.isStale(lastRebuild: now, now: now, maxAge: 30))
+        #expect(!AppIndexWatchPolicy.isStale(
+            lastRebuild: now.addingTimeInterval(-29),
+            now: now,
+            maxAge: 30
+        ))
+        #expect(AppIndexWatchPolicy.isStale(
+            lastRebuild: now.addingTimeInterval(-30),
+            now: now,
+            maxAge: 30
+        ))
+    }
+
+    @Test func rebuildRecordsTimestamp() async {
+        let index = AppIndex()
+        #expect(await index.isStale(now: Date(), maxAge: 30))
+        await index.rebuild()
+        #expect(await !index.isStale(now: Date(), maxAge: 30))
+        #expect(await index.isStale(now: Date().addingTimeInterval(60), maxAge: 30))
+    }
+
+    @Test func folderWatcherKeepsEmptyPathsWithoutStarting() {
+        let watcher = AppFolderWatcher {}
+        watcher.start(paths: [])
+        #expect(watcher.paths.isEmpty)
+        watcher.update(paths: [])
+        #expect(watcher.paths.isEmpty)
+    }
+
     @Test func searchBeforeRebuildIsEmpty() async {
         let index = AppIndex()
         let before = await index.search(query: "Safari", limit: 8, includeSystem: true)

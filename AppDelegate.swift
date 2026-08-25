@@ -6,7 +6,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: StatusItemController?
     private var hotKey: HotKey?
     private var volumeObservers: [NSObjectProtocol] = []
+    private var appFolderWatcher: AppFolderWatcher?
     private var currencyRefreshTimer: Timer?
+    private var indexRefreshTimer: Timer?
+    private var indexDebounce: DispatchWorkItem?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         MainActor.assumeIsolated {
@@ -91,6 +94,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             await AppIndex.shared.rebuild()
             let count = await AppIndex.shared.count
             NSLog("[Velox] Indexed %d apps", count)
+            await MainActor.run { [weak self] in
+                self?.startAppFolderWatching()
+                self?.startIndexRefreshTimer()
+            }
         }
         Task {
             await CurrencyService.shared.prepare()
@@ -185,10 +192,73 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @MainActor
     private func watchVolumes() {
-        volumeObservers = VolumeWatcher.observe {
+        volumeObservers = VolumeWatcher.observe { [weak self] in
             NotificationCenter.default.post(name: .veloxIndexReady, object: AppIndex.shared.signal)
             Task { await AppIndex.shared.rebuild() }
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated {
+                    self?.refreshFolderWatcher()
+                }
+            }
         }
+    }
+
+    @MainActor
+    private func startAppFolderWatching() {
+        guard !Self.isTestHost else { return }
+        if appFolderWatcher == nil {
+            appFolderWatcher = AppFolderWatcher { [weak self] in
+                DispatchQueue.main.async {
+                    MainActor.assumeIsolated {
+                        self?.requestIndexRebuild(debounce: true)
+                    }
+                }
+            }
+        }
+        refreshFolderWatcher()
+    }
+
+    private static var isTestHost: Bool {
+        SingleInstance.isRunningUnderTests()
+            || LaunchAtLogin.isTestHost
+            || NSClassFromString("XCTestCase") != nil
+    }
+
+    @MainActor
+    private func refreshFolderWatcher() {
+        appFolderWatcher?.update(paths: AppIndexWatchPolicy.watchPaths(from: AppScanner.scanRoots()))
+    }
+
+    @MainActor
+    private func requestIndexRebuild(debounce: Bool) {
+        indexDebounce?.cancel()
+        if !debounce {
+            rebuildIndex()
+            return
+        }
+        let work = DispatchWorkItem { [weak self] in
+            MainActor.assumeIsolated {
+                self?.rebuildIndex()
+            }
+        }
+        indexDebounce = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + AppIndexWatchPolicy.debounceInterval, execute: work)
+    }
+
+    @MainActor
+    private func startIndexRefreshTimer() {
+        indexRefreshTimer?.invalidate()
+        guard !Self.isTestHost else { return }
+        let timer = Timer(timeInterval: AppIndexWatchPolicy.periodicInterval, repeats: true) { _ in
+            Task {
+                if await AppIndex.shared.isStale(maxAge: AppIndexWatchPolicy.periodicInterval) {
+                    await AppIndex.shared.rebuild()
+                }
+            }
+        }
+        timer.tolerance = 15
+        RunLoop.main.add(timer, forMode: .common)
+        indexRefreshTimer = timer
     }
 
     @MainActor
@@ -248,7 +318,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func rebuildIndex() {
-        Task { await AppIndex.shared.rebuild() }
+        Task { @MainActor in
+            await AppIndex.shared.rebuild()
+            refreshFolderWatcher()
+        }
     }
 
     @objc private func handleShowRequest() {

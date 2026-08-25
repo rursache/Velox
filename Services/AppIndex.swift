@@ -8,6 +8,7 @@ actor AppIndex {
 
     private(set) var apps: [AppEntry] = []
     private(set) var isReady = false
+    private(set) var lastRebuildAt: Date?
     private var rebuildGeneration: UInt64 = 0
 
     func rebuild() async {
@@ -21,6 +22,7 @@ actor AppIndex {
         guard generation == rebuildGeneration else { return }
         apps = discovered
         isReady = true
+        lastRebuildAt = Date()
         await MainActor.run {
             AppIconCache.removeAll()
         }
@@ -34,6 +36,14 @@ actor AppIndex {
     func replaceAppsForTesting(_ apps: [AppEntry]) {
         self.apps = apps
         isReady = true
+        lastRebuildAt = Date()
+    }
+
+    func isStale(
+        now: Date = Date(),
+        maxAge: TimeInterval = AppIndexWatchPolicy.panelShowMaxAge
+    ) -> Bool {
+        AppIndexWatchPolicy.isStale(lastRebuild: lastRebuildAt, now: now, maxAge: maxAge)
     }
 
     func search(query: String, limit: Int, includeSystem: Bool) -> [(app: AppEntry, score: Int)] {
