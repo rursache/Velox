@@ -91,6 +91,51 @@ struct SearchEngineTests {
         #expect(engine.results.contains { $0.kind == .calculation })
     }
 
+    @Test func newQueryAlwaysSelectsFirstRow() async throws {
+        let engine = await makeEngine(apps: [
+            sampleApp(name: "Bo", path: "/Applications/Bo.app"),
+            sampleApp(name: "Beta", path: "/Applications/Beta.app")
+        ])
+        await engine.searchNow("be")
+        try #require(engine.results.first?.title == "Beta")
+        #expect(engine.selectedIndex == 0)
+
+        await engine.searchNow("b")
+        try #require(engine.results.first?.title == "Bo")
+        #expect(engine.results.contains { $0.title == "Beta" })
+        #expect(engine.selectedIndex == 0)
+    }
+
+    @Test func queryChangeResetsArrowSelectionToFirstRow() async {
+        let engine = await makeEngine(apps: [
+            sampleApp(name: "Safari", path: "/Applications/Safari.app"),
+            sampleApp(name: "Safe", path: "/Applications/Safe.app"),
+            sampleApp(name: "Activity Monitor", path: "/System/Applications/Utilities/Activity Monitor.app")
+        ])
+        await engine.searchNow("sa")
+        #expect(engine.results.count >= 2)
+        engine.moveSelection(by: 1)
+        #expect(engine.selectedIndex == 1)
+
+        await engine.searchNow("act")
+        #expect(engine.results.first?.title == "Activity Monitor")
+        #expect(engine.selectedIndex == 0)
+    }
+
+    @Test func identicalResultsKeepArrowSelection() async {
+        let engine = await makeEngine(apps: [
+            sampleApp(name: "Safari", path: "/Applications/Safari.app"),
+            sampleApp(name: "Safe", path: "/Applications/Safe.app")
+        ])
+        await engine.searchNow("saf")
+        #expect(engine.results.count >= 2)
+        engine.moveSelection(by: 1)
+        let selected = engine.selectedIndex
+        #expect(selected == 1)
+        await engine.searchNow("saf")
+        #expect(engine.selectedIndex == selected)
+    }
+
     @Test func moveSelectionWraps() async {
         let engine = await makeEngine(apps: [
             sampleApp(name: "Safari", path: "/Applications/Safari.app"),

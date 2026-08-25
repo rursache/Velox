@@ -196,15 +196,9 @@ final class SearchEngine: ObservableObject {
             return
         }
 
-        let previousId = results.indices.contains(selectedIndex) ? results[selectedIndex].id : nil
         let previousCount = results.count
         results = items
-
-        if let previousId, let idx = items.firstIndex(where: { $0.id == previousId }) {
-            selectedIndex = idx
-        } else {
-            selectedIndex = 0
-        }
+        selectedIndex = 0
 
         if previousCount != items.count {
             NotificationCenter.default.post(name: .veloxResultsDidChange, object: nil)
