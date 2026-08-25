@@ -184,7 +184,7 @@ struct AppVersionTests {
     @Test func liveBundleMatchesInfoPlist() {
         let short = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
         let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
-        #expect(short == "1.0.1")
+        #expect(short == "1.0.2")
         let expected = AppVersion.label(short: short, build: build)
         #expect(AppVersion.label() == expected)
         #expect(AppVersion.label().hasPrefix("v"))
