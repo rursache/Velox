@@ -48,6 +48,14 @@ struct SearchEngineTests {
         #expect(engine.results.first?.score == 200_000)
     }
 
+    @Test func percentOfQueryIsCalculation() async {
+        let engine = await makeEngine()
+        await engine.searchNow("1% of 75000")
+        #expect(engine.results.first?.kind == .calculation)
+        #expect(engine.results.first?.title == "750")
+        #expect(engine.results.first?.copyValue == "750")
+    }
+
     @Test func chromePreviewShowsSampleRowsAndClears() async {
         let engine = await makeEngine()
         engine.showChromePreview()

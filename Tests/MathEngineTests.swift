@@ -33,6 +33,23 @@ struct MathEngineTests {
         ("100-20%", "80"),
         ("100/2+20%", "60"),
         ("100-50+20%", "60"),
+        ("1% of 75000", "750"),
+        ("15% of 200", "30"),
+        ("2.5% of 1000", "25"),
+        ("1 % of 75000", "750"),
+        ("1%of75000", "750"),
+        ("1% OF 75000", "750"),
+        ("50 + 1% of 75000", "800"),
+        ("1% of (100+50)", "1.5"),
+        ("1% of -75000", "-750"),
+        ("0% of 100", "0"),
+        ("100% of 50", "50"),
+        ("(2+3)% of 100", "5"),
+        ("1 percent of 75000", "750"),
+        ("1 pct of 75000", "750"),
+        ("20 percent", "0.2"),
+        ("100 + 20 percent", "120"),
+        ("100 - 20 percent", "80"),
         ("12 * 8", "96"),
         ("2×3", "6"),
         ("8÷2", "4"),
@@ -82,5 +99,9 @@ struct MathEngineTests {
     @Test func nanIsNotAResult() {
         #expect(MathEngine.evaluate("0/0") == nil)
         #expect(MathEngine.evaluate("sqrt(-1)") == nil)
+    }
+
+    @Test func percentOfDoesNotMatchDiscountOff() {
+        #expect(MathEngine.evaluate("10% off 50") == nil)
     }
 }

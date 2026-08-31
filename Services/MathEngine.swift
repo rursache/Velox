@@ -10,12 +10,11 @@ enum MathEngine {
         guard !trimmed.isEmpty else { return nil }
 
         var expr = normalizeOperators(trimmed)
+        expr = rewritePercent(expr)
         guard looksLikeMath(expr) else { return nil }
         if expr.range(of: #"^[\d\.]+$"#, options: .regularExpression) != nil {
             return nil
         }
-
-        expr = rewritePercent(expr)
 
         if let value = evaluateExpression(expr), !value.isNaN {
             let display = format(value)
@@ -46,10 +45,15 @@ enum MathEngine {
             || lowered.contains("pi")
     }
 
+    /// `1% of 75000` and `1 percent of 75000` become `(1*0.01)*75000`
     private static func rewritePercent(_ input: String) -> String {
-        var s = input
+        var s = replaceAll(
+            in: input,
+            pattern: #"(?i)((?:\d+(?:\.\d+)?)|\([^()]+\))\s*(?:%|percent|pct)\s*of(?![a-zA-Z])\s*"#,
+            template: "($1*0.01)*"
+        )
         if let range = s.range(
-            of: #"([+-])\s*(\d+(?:\.\d+)?)%\s*$"#,
+            of: #"(?i)([+-])\s*(\d+(?:\.\d+)?)\s*(?:%|percent|pct)\s*$"#,
             options: .regularExpression
         ) {
             let token = String(s[range])
@@ -68,7 +72,18 @@ enum MathEngine {
             let num = token.dropLast()
             s.replaceSubrange(range, with: "(\(num)*0.01)")
         }
+        while let range = s.range(of: #"(?i)(\d+(?:\.\d+)?)\s*(?:percent|pct)\b"#, options: .regularExpression) {
+            let token = String(s[range])
+            let num = token.filter { $0.isNumber || $0 == "." }
+            s.replaceSubrange(range, with: "(\(num)*0.01)")
+        }
         return s.replacingOccurrences(of: "^", with: "**")
+    }
+
+    private static func replaceAll(in input: String, pattern: String, template: String) -> String {
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return input }
+        let range = NSRange(input.startIndex..., in: input)
+        return regex.stringByReplacingMatches(in: input, range: range, withTemplate: template)
     }
 
     private static func format(_ value: Double) -> String {
