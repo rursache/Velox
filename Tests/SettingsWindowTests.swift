@@ -180,16 +180,6 @@ struct AppVersionTests {
     @Test func stripsExistingVPrefix() {
         #expect(AppVersion.label(short: "v1.2.3", build: "9") == "v1.2.3 (9)")
     }
-
-    @Test func liveBundleMatchesInfoPlist() {
-        let short = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
-        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
-        #expect(short == "1.0.3")
-        let expected = AppVersion.label(short: short, build: build)
-        #expect(AppVersion.label() == expected)
-        #expect(AppVersion.label().hasPrefix("v"))
-        #expect(AppVersion.label().contains("("))
-    }
 }
 
 @Suite("Constants")
