@@ -217,7 +217,8 @@ actor CurrencyService {
     ]
 
     private static let connector = #"(?:to|in|into|->|→)"#
-    private static let amountToken = #"(\d+(?:[.,]\d+)*)"#
+    // Optional k / m / b shorthand: $21k, 1.5m usd. Backtracking keeps "100mxn" as 100 MXN
+    private static let amountToken = #"(\d+(?:[.,]\d+)*[kKmMbB]?)"#
     private static let codeToken = #"([A-Za-z]{3})"#
 
     static func parse(_ query: String) -> Parsed? {
@@ -286,7 +287,25 @@ actor CurrencyService {
     }
 
     static func parseAmount(_ raw: String, decimalIsComma: Bool) -> Double? {
-        let s = raw.trimmingCharacters(in: .whitespaces)
+        var s = raw.trimmingCharacters(in: .whitespaces)
+        var multiplier: Double = 1
+        if let last = s.last, let scale = shorthandMultiplier(last) {
+            multiplier = scale
+            s.removeLast()
+        }
+        return parseNumber(s, decimalIsComma: decimalIsComma).map { $0 * multiplier }
+    }
+
+    static func shorthandMultiplier(_ suffix: Character) -> Double? {
+        switch suffix.lowercased() {
+        case "k": return 1_000
+        case "m": return 1_000_000
+        case "b": return 1_000_000_000
+        default: return nil
+        }
+    }
+
+    private static func parseNumber(_ s: String, decimalIsComma: Bool) -> Double? {
         if s.range(of: #"^[1-9]\d{0,2}(,\d{3})+(\.\d+)?$"#, options: .regularExpression) != nil {
             return Double(s.replacingOccurrences(of: ",", with: ""))
         }

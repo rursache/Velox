@@ -21,7 +21,15 @@ struct CurrencyParserTests {
         ("£50 in usd", 50.0, "GBP", "USD"),
         ("A$50 to USD", 50.0, "AUD", "USD"),
         ("C$50 to USD", 50.0, "CAD", "USD"),
-        ("100usd to eur", 100.0, "USD", "EUR")
+        ("100usd to eur", 100.0, "USD", "EUR"),
+        ("$21k to EUR", 21_000.0, "USD", "EUR"),
+        ("21K usd to eur", 21_000.0, "USD", "EUR"),
+        ("1.5m usd to eur", 1_500_000.0, "USD", "EUR"),
+        ("2b eur in usd", 2_000_000_000.0, "EUR", "USD"),
+        ("€1,5k to usd", 1_500.0, "EUR", "USD"),
+        ("100mxn to eur", 100.0, "MXN", "EUR"),
+        ("100 mxn to eur", 100.0, "MXN", "EUR"),
+        ("5 bgn to eur", 5.0, "BGN", "EUR")
     ])
     func parsesStandardQueries(query: String, amount: Double, from: String, to: String) {
         let parsed = CurrencyService.parse(query)
@@ -53,6 +61,13 @@ struct CurrencyParserTests {
         #expect(CurrencyService.parseAmount("1.234", decimalIsComma: true) == 1234)
         #expect(CurrencyService.parseAmount("1.234.567") == 1_234_567)
         #expect(CurrencyService.parseAmount("1.234,56") == 1234.56)
+        #expect(CurrencyService.parseAmount("21k") == 21_000)
+        #expect(CurrencyService.parseAmount("21K") == 21_000)
+        #expect(CurrencyService.parseAmount("1.5m") == 1_500_000)
+        #expect(CurrencyService.parseAmount("2B") == 2_000_000_000)
+        #expect(CurrencyService.parseAmount("1,000k") == 1_000_000)
+        #expect(CurrencyService.parseAmount("k") == nil)
+        #expect(CurrencyService.parseAmount("21x") == nil)
     }
 
     @Test func rejectsBareAppShapedQueries() {
