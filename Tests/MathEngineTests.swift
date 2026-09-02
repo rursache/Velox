@@ -69,7 +69,13 @@ struct MathEngineTests {
         ("what is 45% of 40", "18"),
         ("45% of 40 is", "18"),
         ("45% of 40 is what?", "18"),
-        ("10% of 20k", "2000")
+        ("10% of 20k", "2000"),
+        ("1,000 + 1", "1001"),
+        ("5,000 * 2", "10000"),
+        ("1,234,567 - 567", "1234000"),
+        ("1,5 * 2", "3"),
+        ("10,25 + 0,75", "11"),
+        ("1,000.5 + 0.5", "1001")
     ])
     func evaluatesExpressions(query: String, expected: String) {
         let result = MathEngine.evaluate(query)
@@ -132,6 +138,12 @@ struct MathEngineTests {
         let result = MathEngine.evaluate("40 is what % of 80")
         #expect(result?.display == "50%")
         #expect(result?.raw == "50")
+    }
+
+    @Test func strayCommasAreNotMath() {
+        #expect(MathEngine.evaluate("1,,000 + 1") == nil)
+        #expect(MathEngine.evaluate("1, + 2") == nil)
+        #expect(MathEngine.evaluate("1,000") == nil)
     }
 
     @Test func percentOfDoesNotMatchDiscountOff() {

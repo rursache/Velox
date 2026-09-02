@@ -9,7 +9,7 @@ enum MathEngine {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
 
-        var expr = normalizeOperators(trimmed)
+        var expr = normalizeNumberSeparators(normalizeOperators(trimmed))
         if isBarePercentage(expr) { return nil }
         var resultIsPercent = false
         if let phrase = rewritePercentQuestion(expr) {
@@ -68,6 +68,14 @@ enum MathEngine {
             .replacingOccurrences(of: "×", with: "*")
             .replacingOccurrences(of: "÷", with: "/")
             .replacingOccurrences(of: "−", with: "-")
+    }
+
+    /// `1,000 + 1` drops the thousands separators, `1,5*2` treats a short comma group as a decimal
+    private static func normalizeNumberSeparators(_ input: String) -> String {
+        guard input.contains(",") else { return input }
+        var s = replaceAll(in: input, pattern: #"(\d),(?=\d{3}(?!\d))"#, template: "$1")
+        s = replaceAll(in: s, pattern: #"(\d),(?=\d)"#, template: "$1.")
+        return s
     }
 
     private static func looksLikeMath(_ trimmed: String) -> Bool {
