@@ -55,6 +55,25 @@ enum SearchPanelShowTransition {
     }
 }
 
+enum PreviousAppPolicy {
+    /// Focus goes back to the frontmost app, or to the app activated most recently before
+    /// Velox took focus. Never guess from the unordered running-app list
+    static func pick<App>(
+        frontmost: App?,
+        lastActivated: App?,
+        isSelf: (App) -> Bool,
+        isTerminated: (App) -> Bool
+    ) -> App? {
+        if let frontmost, !isSelf(frontmost), !isTerminated(frontmost) {
+            return frontmost
+        }
+        if let lastActivated, !isSelf(lastActivated), !isTerminated(lastActivated) {
+            return lastActivated
+        }
+        return nil
+    }
+}
+
 enum SearchPanelPresentation {
     static func ignoresMouseEvents(_ mode: SearchPanelMode) -> Bool {
         false
@@ -153,6 +172,8 @@ final class SearchPanelController: NSObject, NSWindowDelegate {
     private var ignoreResignUntil: Date = .distantPast
     /// App that was frontmost before Velox stole focus — restored on hide
     private var previousApp: NSRunningApplication?
+    private var lastActivatedOtherApp: NSRunningApplication?
+    private var workspaceObserver: NSObjectProtocol?
     /// Skip persisting origin while we setFrame programmatically
     private var isProgrammaticFrameChange = false
     private var cancellables = Set<AnyCancellable>()
@@ -265,8 +286,25 @@ final class SearchPanelController: NSObject, NSWindowDelegate {
             name: NSApplication.didChangeScreenParametersNotification,
             object: nil
         )
+        workspaceObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] note in
+            guard let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+                  app.bundleIdentifier != Bundle.main.bundleIdentifier else { return }
+            MainActor.assumeIsolated {
+                self?.lastActivatedOtherApp = app
+            }
+        }
         observeChrome()
         applyChrome()
+    }
+
+    deinit {
+        if let workspaceObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(workspaceObserver)
+        }
     }
 
     // MARK: - Window delegate
@@ -490,18 +528,13 @@ final class SearchPanelController: NSObject, NSWindowDelegate {
     }
 
     private func rememberPreviousApp() {
-        let front = NSWorkspace.shared.frontmostApplication
-        // Don't store ourselves
-        if let front, front.bundleIdentifier != Bundle.main.bundleIdentifier {
-            previousApp = front
-            return
-        }
-        // Fall back to the most recently active non-Velox app
-        previousApp = NSWorkspace.shared.runningApplications.first {
-            $0.activationPolicy == .regular
-                && $0.bundleIdentifier != Bundle.main.bundleIdentifier
-                && !$0.isTerminated
-        }
+        let selfID = Bundle.main.bundleIdentifier
+        previousApp = PreviousAppPolicy.pick(
+            frontmost: NSWorkspace.shared.frontmostApplication,
+            lastActivated: lastActivatedOtherApp,
+            isSelf: { $0.bundleIdentifier == selfID },
+            isTerminated: { $0.isTerminated }
+        )
     }
 
     private func restorePreviousApp() {

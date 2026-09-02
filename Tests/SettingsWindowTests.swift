@@ -41,6 +41,19 @@ struct SettingsWindowTests {
         #expect(SearchPanelShowTransition.shouldExitPreview(from: .hidden) == false)
     }
 
+    @Test func previousAppFallsBackToLastActivatedNotAnArbitraryOne() {
+        let isSelf: (String) -> Bool = { $0 == "velox" }
+        let alive: (String) -> Bool = { _ in false }
+        #expect(PreviousAppPolicy.pick(frontmost: "safari", lastActivated: "notes", isSelf: isSelf, isTerminated: alive) == "safari")
+        #expect(PreviousAppPolicy.pick(frontmost: "velox", lastActivated: "notes", isSelf: isSelf, isTerminated: alive) == "notes")
+        #expect(PreviousAppPolicy.pick(frontmost: nil, lastActivated: "notes", isSelf: isSelf, isTerminated: alive) == "notes")
+        #expect(PreviousAppPolicy.pick(frontmost: "velox", lastActivated: "velox", isSelf: isSelf, isTerminated: alive) == nil)
+        #expect(PreviousAppPolicy.pick(frontmost: "velox", lastActivated: nil, isSelf: isSelf, isTerminated: alive) == nil)
+        let quit: (String) -> Bool = { $0 == "notes" }
+        #expect(PreviousAppPolicy.pick(frontmost: "velox", lastActivated: "notes", isSelf: isSelf, isTerminated: quit) == nil)
+        #expect(PreviousAppPolicy.pick(frontmost: "notes", lastActivated: "safari", isSelf: isSelf, isTerminated: quit) == "safari")
+    }
+
     @Test func staleShowTimerDoesNotRearmHidesOnDeactivate() {
         #expect(SearchPanelShowTransition.shouldRearmHidesOnDeactivate(scheduled: 3, current: 3, mode: .interactive))
         #expect(!SearchPanelShowTransition.shouldRearmHidesOnDeactivate(scheduled: 2, current: 3, mode: .interactive))
