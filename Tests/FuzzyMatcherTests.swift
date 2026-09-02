@@ -32,6 +32,31 @@ struct FuzzyMatcherTests {
         #expect(match.score >= 45_000)
     }
 
+    @Test(arguments: [
+        ("vs code", "Visual Studio Code"),
+        ("v s c", "Visual Studio Code"),
+        ("goo ch", "Google Chrome"),
+        ("sys set", "System Settings")
+    ])
+    func spacedAbbreviationsMatchLikeInitials(query: String, name: String) {
+        let spaced = FuzzyMatcher.match(query: query, in: name)
+        let joined = FuzzyMatcher.match(query: query.replacingOccurrences(of: " ", with: ""), in: name)
+        #expect(spaced.matched)
+        #expect(spaced.score >= 45_000)
+        #expect(spaced.score == joined.score)
+    }
+
+    @Test func spacedWordPrefixStillMatches() {
+        let match = FuzzyMatcher.match(query: "1 pass", in: "1Password")
+        #expect(match.matched)
+        #expect(match.score >= 45_000)
+    }
+
+    @Test func spacedAbbreviationDoesNotInventMatches() {
+        #expect(!FuzzyMatcher.match(query: "vs cade", in: "Visual Studio Code").matched)
+        #expect(!FuzzyMatcher.match(query: "x y", in: "Safari").matched)
+    }
+
     @Test func wordPrefixOnePassword() {
         let match = FuzzyMatcher.match(query: "1p", in: "1Password")
         #expect(match.matched)

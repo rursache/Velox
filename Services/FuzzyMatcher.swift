@@ -62,8 +62,10 @@ enum FuzzyMatcher {
     // MARK: - Helpers
 
     private static func acronymMatch(query: String, text: String) -> Int? {
+        // "vs code" and "vscode" both mean v-s-code; spaces never take part in initials
+        let query = query.filter { !$0.isWhitespace }
         let initials = wordInitials(text)
-        guard !initials.isEmpty else { return nil }
+        guard !query.isEmpty, !initials.isEmpty else { return nil }
         if initials.hasPrefix(query) {
             return 50_000 + max(0, 50 - text.count)
         }
