@@ -10,6 +10,12 @@ enum MathEngine {
         guard !trimmed.isEmpty else { return nil }
 
         var expr = normalizeOperators(trimmed)
+        if isBarePercentage(expr) { return nil }
+        var resultIsPercent = false
+        if let phrase = rewritePercentQuestion(expr) {
+            expr = phrase.expression
+            resultIsPercent = phrase.resultIsPercent
+        }
         expr = rewritePercent(expr)
         guard looksLikeMath(expr) else { return nil }
         if expr.range(of: #"^[\d\.]+$"#, options: .regularExpression) != nil {
@@ -18,9 +24,43 @@ enum MathEngine {
 
         if let value = evaluateExpression(expr), !value.isNaN {
             let display = format(value)
-            return (display, display)
+            return resultIsPercent ? (display + "%", display) : (display, display)
         }
         return nil
+    }
+
+    private static let percentWord = #"(?:%|percent|pct)"#
+
+    /// `10%` on its own is not a calculation
+    private static func isBarePercentage(_ input: String) -> Bool {
+        input.range(
+            of: #"(?i)^\d+(?:\.\d+)?\s*\#(percentWord)$"#,
+            options: .regularExpression
+        ) != nil
+    }
+
+    /// `40 is 45% of` asks for the whole, `40 is what % of 80` asks for the share
+    private static func rewritePercentQuestion(_ input: String) -> (expression: String, resultIsPercent: Bool)? {
+        var s = input
+        s = replaceAll(in: s, pattern: #"(?i)^what\s+is\s+"#, template: "")
+        if let m = captures(#"(?i)^(.+?)\s+is\s+(\d+(?:\.\d+)?)\s*\#(percentWord)\s+of(?:\s+what)?\s*\??$"#, in: s) {
+            return ("(\(m[0]))/((\(m[1]))*0.01)", false)
+        }
+        if let m = captures(#"(?i)^(.+?)\s+is\s+what\s+\#(percentWord)\s+of\s+(.+?)\s*\??$"#, in: s) {
+            return ("(\(m[0]))/(\(m[1]))*100", true)
+        }
+        s = replaceAll(in: s, pattern: #"(?i)\s+is(?:\s+what)?\s*\??$"#, template: "")
+        return s == input ? nil : (s, false)
+    }
+
+    private static func captures(_ pattern: String, in input: String) -> [String]? {
+        guard let regex = try? NSRegularExpression(pattern: pattern),
+              let match = regex.firstMatch(in: input, range: NSRange(input.startIndex..., in: input)) else {
+            return nil
+        }
+        return (1..<match.numberOfRanges).map { index in
+            Range(match.range(at: index), in: input).map { String(input[$0]) } ?? ""
+        }
     }
 
     private static func normalizeOperators(_ input: String) -> String {
@@ -35,7 +75,7 @@ enum MathEngine {
         if trimmed.range(of: mathPattern, options: .regularExpression) != nil {
             return trimmed.range(of: #"[\+\-\*/%\^\(]"#, options: .regularExpression) != nil
         }
-        let fnPattern = #"^(?i)[\d\s\.\+\-\*/%\^\(\)\,sqrtabsceilfloorsincostanpie]+$"#
+        let fnPattern = #"^(?i)[\d\s\.\+\-\*/%\^\(\)\,sqrtabsceilfloorsincostanpiekmb]+$"#
         guard trimmed.range(of: fnPattern, options: .regularExpression) != nil else {
             return false
         }
@@ -138,9 +178,16 @@ enum MathEngine {
                     j += 1
                 }
                 let numStr = String(chars[i..<j])
+                // 21k, 1.5m, 2b: a lone scale letter right after the number
+                var scale: Double = 1
+                if j < chars.count, let factor = CurrencyService.shorthandMultiplier(chars[j]),
+                   j + 1 == chars.count || !chars[j + 1].isLetter {
+                    scale = factor
+                    j += 1
+                }
                 if let v = Double(numStr) {
                     insertImplicitMultiply(&tokens)
-                    tokens.append(.number(v))
+                    tokens.append(.number(v * scale))
                 }
                 i = j
                 continue

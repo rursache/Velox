@@ -15,7 +15,7 @@ brew tap rursache/tap && brew trust rursache/tap && brew install --cask velox
 ## Features
 
 - Instant fuzzy app search (`gc` → Google Chrome) across `/Applications`, `~/Applications`, system apps, and `/Applications` on attached external disks
-- Calculator and currency conversion (`12*8+4`, `100 USD to EUR`), both **on** by default. Rates refresh on launch and every hour
+- Calculator and currency conversion (`12*8+4`, `40 is 45% of`, `$21k to EUR`), both **on** by default. Rates refresh on launch and every hour
 - Remappable hotkey (default **⌥Space**)
 - Bar themes: Glass, Clear, Midnight, Snow, Olive, Harbor, Orchid, Parchment, plus a separate result highlight and live corner radius
 - Show on the screen with the mouse, the active window, or all screens

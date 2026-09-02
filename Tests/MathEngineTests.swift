@@ -28,7 +28,6 @@ struct MathEngineTests {
         ("cos(180)", "-1"),
         ("tan(0)", "0"),
         ("tan(45)", "1"),
-        ("20%", "0.2"),
         ("100+20%", "120"),
         ("100-20%", "80"),
         ("100/2+20%", "60"),
@@ -47,7 +46,6 @@ struct MathEngineTests {
         ("(2+3)% of 100", "5"),
         ("1 percent of 75000", "750"),
         ("1 pct of 75000", "750"),
-        ("20 percent", "0.2"),
         ("100 + 20 percent", "120"),
         ("100 - 20 percent", "80"),
         ("12 * 8", "96"),
@@ -55,7 +53,23 @@ struct MathEngineTests {
         ("8÷2", "4"),
         ("5−3", "2"),
         ("-2^2", "-4"),
-        ("-2^2^2", "-16")
+        ("-2^2^2", "-16"),
+        ("21k*2", "42000"),
+        ("1.5m + 500k", "2000000"),
+        ("2b/1000", "2000000"),
+        ("21K + 1", "21001"),
+        ("40 is 45% of", "88.88888889"),
+        ("40 is 45% of what", "88.88888889"),
+        ("40 is 45% of what?", "88.88888889"),
+        ("40 is 45 percent of", "88.88888889"),
+        ("40 is 50% of", "80"),
+        ("40 is what % of 80", "50%"),
+        ("40 is what percent of 80", "50%"),
+        ("30 is what % of 40?", "75%"),
+        ("what is 45% of 40", "18"),
+        ("45% of 40 is", "18"),
+        ("45% of 40 is what?", "18"),
+        ("10% of 20k", "2000")
     ])
     func evaluatesExpressions(query: String, expected: String) {
         let result = MathEngine.evaluate(query)
@@ -99,6 +113,25 @@ struct MathEngineTests {
     @Test func nanIsNotAResult() {
         #expect(MathEngine.evaluate("0/0") == nil)
         #expect(MathEngine.evaluate("sqrt(-1)") == nil)
+    }
+
+    @Test func barePercentageIsNotACalculation() {
+        #expect(MathEngine.evaluate("10%") == nil)
+        #expect(MathEngine.evaluate("20 percent") == nil)
+        #expect(MathEngine.evaluate("2.5 pct") == nil)
+        #expect(MathEngine.evaluate("100+20%")?.display == "120")
+    }
+
+    @Test func scaleSuffixNeedsAnOperator() {
+        #expect(MathEngine.evaluate("21k") == nil)
+        #expect(MathEngine.evaluate("2m") == nil)
+        #expect(MathEngine.evaluate("21kg*2") == nil)
+    }
+
+    @Test func percentQuestionCopiesTheNumberOnly() {
+        let result = MathEngine.evaluate("40 is what % of 80")
+        #expect(result?.display == "50%")
+        #expect(result?.raw == "50")
     }
 
     @Test func percentOfDoesNotMatchDiscountOff() {
