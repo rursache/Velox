@@ -68,6 +68,28 @@ struct PanelAlignmentTests {
         #expect(PanelPlacement.screenIndex(containing: offscreen, frames: frames) == nil)
     }
 
+    @Test func currentScreenPrefersLiveFrameOverSavedPosition() {
+        let frames = [
+            NSRect(x: 0, y: 0, width: 1440, height: 900),
+            NSRect(x: 1440, y: 0, width: 1920, height: 1080)
+        ]
+        let savedOnPrimary = NSRect(x: 380, y: 600, width: 680, height: 56)
+        let draggedToSecondary = NSRect(x: 1700, y: 400, width: 680, height: 56)
+        #expect(PanelPlacement.currentScreenIndex(
+            liveFrame: draggedToSecondary, savedProbe: savedOnPrimary, frames: frames
+        ) == 1)
+        #expect(PanelPlacement.currentScreenIndex(
+            liveFrame: nil, savedProbe: savedOnPrimary, frames: frames
+        ) == 0)
+        let offscreen = NSRect(x: -3000, y: -3000, width: 680, height: 56)
+        #expect(PanelPlacement.currentScreenIndex(
+            liveFrame: offscreen, savedProbe: savedOnPrimary, frames: frames
+        ) == 0)
+        #expect(PanelPlacement.currentScreenIndex(
+            liveFrame: offscreen, savedProbe: nil, frames: frames
+        ) == nil)
+    }
+
     @Test func guidesMatchFactoryTargets() {
         let factory = PanelAlignment.factoryFrame(size: size, visible: visible)
         let guides = PanelAlignment.guides(for: factory, visible: visible)

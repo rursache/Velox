@@ -396,6 +396,22 @@ enum PanelPlacement {
         return (0..<count).filter { $0 != keep }
     }
 
+    /// The screen the panel is on right now. A visible panel's live frame wins over the saved
+    /// position, which is stale while the user is still dragging across displays
+    static func currentScreenIndex(
+        liveFrame: NSRect?,
+        savedProbe: NSRect?,
+        frames: [NSRect]
+    ) -> Int? {
+        if let liveFrame, let index = screenIndex(containing: liveFrame, frames: frames) {
+            return index
+        }
+        if let savedProbe, let index = screenIndex(containing: savedProbe, frames: frames) {
+            return index
+        }
+        return nil
+    }
+
     static func screenIndex(containing frame: NSRect, frames: [NSRect], minArea: CGFloat = 48 * 24) -> Int? {
         var best: (Int, CGFloat)?
         for (index, candidate) in frames.enumerated() {

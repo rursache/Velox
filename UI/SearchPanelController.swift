@@ -537,15 +537,20 @@ final class SearchPanelController: NSObject, NSWindowDelegate {
 
     private func targetScreen(preferCurrent: Bool) -> NSScreen? {
         let screens = NSScreen.screens
-        if preferCurrent, let saved = Preferences.shared.customPanelPosition {
-            let probe = NSRect(x: saved.x, y: saved.maxY - 56, width: Self.panelWidth, height: 56)
-            if let index = PanelPlacement.screenIndex(containing: probe, frames: screens.map(\.frame)),
-               screens.indices.contains(index) {
+        if preferCurrent {
+            let probe = Preferences.shared.customPanelPosition.map { saved in
+                NSRect(x: saved.x, y: saved.maxY - 56, width: Self.panelWidth, height: 56)
+            }
+            if let index = PanelPlacement.currentScreenIndex(
+                liveFrame: panel.isVisible ? panel.frame : nil,
+                savedProbe: probe,
+                frames: screens.map(\.frame)
+            ), screens.indices.contains(index) {
                 return screens[index]
             }
-        }
-        if preferCurrent, let current = panel.screen {
-            return current
+            if let current = panel.screen {
+                return current
+            }
         }
         let frames = screens.map(\.frame)
         let mainIndex = NSScreen.main.flatMap { main in
