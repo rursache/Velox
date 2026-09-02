@@ -284,6 +284,111 @@ struct AppIndexTests {
         #expect(roots == [URL(fileURLWithPath: "/Volumes/SSD/Applications", isDirectory: true)])
     }
 
+    @Test func hiddenDisksUnderVolumesStillIndex() {
+        let nobrowse = ExternalVolumeRoots.Candidate(
+            url: URL(fileURLWithPath: "/Volumes/Storage"),
+            isLocal: true,
+            isRootFileSystem: false,
+            hasApplications: true,
+            isBrowsable: false
+        )
+        let preboot = ExternalVolumeRoots.Candidate(
+            url: URL(fileURLWithPath: "/System/Volumes/Preboot"),
+            isLocal: true,
+            isRootFileSystem: false,
+            hasApplications: true,
+            isBrowsable: false
+        )
+        let snapshot = ExternalVolumeRoots.Candidate(
+            url: URL(fileURLWithPath: "/Volumes/.timemachine/ABC/2026-01-01-000000.backup"),
+            isLocal: true,
+            isRootFileSystem: false,
+            hasApplications: true,
+            isBrowsable: false
+        )
+        let localSnapshot = ExternalVolumeRoots.Candidate(
+            url: URL(fileURLWithPath: "/Volumes/com.apple.TimeMachine.localsnapshots"),
+            isLocal: true,
+            isRootFileSystem: false,
+            hasApplications: true,
+            isBrowsable: false
+        )
+        let simulator = ExternalVolumeRoots.Candidate(
+            url: URL(fileURLWithPath: "/Library/Developer/CoreSimulator/Volumes/iOS_23F77"),
+            isLocal: true,
+            isRootFileSystem: false,
+            hasApplications: true,
+            isBrowsable: false
+        )
+        let browsableElsewhere = ExternalVolumeRoots.Candidate(
+            url: URL(fileURLWithPath: "/Users/me/mnt/Disk"),
+            isLocal: true,
+            isRootFileSystem: false,
+            hasApplications: true,
+            isBrowsable: true
+        )
+        let unknown = ExternalVolumeRoots.Candidate(
+            url: URL(fileURLWithPath: "/Volumes/SSD"),
+            isLocal: true,
+            isRootFileSystem: false,
+            hasApplications: true,
+            isBrowsable: nil
+        )
+        let roots = ExternalVolumeRoots.applicationsDirectories(
+            from: [nobrowse, preboot, snapshot, localSnapshot, simulator, browsableElsewhere, unknown]
+        )
+        #expect(roots == [
+            URL(fileURLWithPath: "/Volumes/Storage/Applications", isDirectory: true),
+            URL(fileURLWithPath: "/Users/me/mnt/Disk/Applications", isDirectory: true),
+            URL(fileURLWithPath: "/Volumes/SSD/Applications", isDirectory: true)
+        ])
+    }
+
+    @Test func userDiskMountPointsAreDirectChildrenOfVolumes() {
+        #expect(ExternalVolumeRoots.isUserDiskMountPoint("/Volumes/Storage"))
+        #expect(ExternalVolumeRoots.isUserDiskMountPoint("/Volumes/My Disk/"))
+        #expect(!ExternalVolumeRoots.isUserDiskMountPoint("/Volumes"))
+        #expect(!ExternalVolumeRoots.isUserDiskMountPoint("/Volumes/.timemachine/ABC"))
+        #expect(!ExternalVolumeRoots.isUserDiskMountPoint("/Volumes/.hidden"))
+        #expect(!ExternalVolumeRoots.isUserDiskMountPoint("/Volumes/com.apple.TimeMachine.localsnapshots"))
+        #expect(!ExternalVolumeRoots.isUserDiskMountPoint("/Volumes/Storage/Nested"))
+        #expect(!ExternalVolumeRoots.isUserDiskMountPoint("/System/Volumes/Preboot"))
+        #expect(!ExternalVolumeRoots.isUserDiskMountPoint("/"))
+    }
+
+    @Test func liveVolumeRootsNeverIncludeSystemOrSimulatorMounts() {
+        let roots = ExternalVolumeRoots.applicationsDirectories().map(\.path)
+        for root in roots {
+            #expect(!root.hasPrefix("/System/Volumes/"), Comment(rawValue: root))
+            #expect(!root.contains("/CoreSimulator/"), Comment(rawValue: root))
+            #expect(!root.contains("/cryptexd/"), Comment(rawValue: root))
+            #expect(!root.contains("/.timemachine/"), Comment(rawValue: root))
+            #expect(!root.contains("com.apple.TimeMachine"), Comment(rawValue: root))
+        }
+    }
+
+    @Test func nobrowseDiskOnThisMachineIsScanned() throws {
+        let storage = "/Volumes/Storage/Applications"
+        var isDir: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: storage, isDirectory: &isDir), isDir.boolValue else {
+            return
+        }
+        let roots = AppScanner.scanRoots().map { $0.resolvingSymlinksInPath().path }
+        #expect(roots.contains(storage))
+        MountedVolumeIndex.refresh()
+        #expect(MountedVolumeIndex.contains(storage + "/Example.app"))
+    }
+
+    @Test func mountedVolumeIndexCountsHiddenVolumes() {
+        MountedVolumeIndex.refresh(urls: [
+            URL(fileURLWithPath: "/", isDirectory: true),
+            URL(fileURLWithPath: "/System/Volumes/Preboot", isDirectory: true),
+            URL(fileURLWithPath: "/Volumes/Storage", isDirectory: true)
+        ])
+        #expect(MountedVolumeIndex.contains("/Volumes/Storage/Applications/WoWSilicon.app"))
+        #expect(!MountedVolumeIndex.contains("/Volumes/Gone/Applications/WoWSilicon.app"))
+    }
+
     @Test func scanRootsDedupesBootAliasesAndKeepsExternalApplications() {
         let roots = AppScanner.scanRoots(external: [
             URL(fileURLWithPath: "/Applications", isDirectory: true),

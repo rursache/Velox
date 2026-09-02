@@ -192,10 +192,11 @@ enum MountedVolumeIndex: Sendable {
     private static let lock = NSLock()
     nonisolated(unsafe) private static var prefixes: [String] = []
 
+    // No `.skipHiddenVolumes`: disks mounted `nobrowse` still hold apps and must count as mounted
     static func refresh(
         urls: [URL]? = FileManager.default.mountedVolumeURLs(
             includingResourceValuesForKeys: nil,
-            options: [.skipHiddenVolumes]
+            options: []
         )
     ) {
         let next = (urls ?? []).compactMap { url -> String? in
@@ -244,6 +245,7 @@ enum ExternalVolumeRoots {
         var isLocal: Bool?
         var isRootFileSystem: Bool?
         var hasApplications: Bool
+        var isBrowsable: Bool? = true
     }
 
     static func applicationsDirectories(
@@ -257,8 +259,20 @@ enum ExternalVolumeRoots {
             guard candidate.hasApplications else { return nil }
             let resolved = candidate.url.resolvingSymlinksInPath().standardizedFileURL.path
             if resolved == boot || resolved == "/System/Volumes/Data" { return nil }
+            if candidate.isBrowsable == false, !isUserDiskMountPoint(candidate.url.path) {
+                return nil
+            }
             return candidate.url.appendingPathComponent("Applications", isDirectory: true)
         }
+    }
+
+    /// Hidden (`nobrowse`) volumes qualify only when mounted directly under /Volumes like a normal disk.
+    /// Keeps Time Machine snapshot mounts, simulator runtimes, and cryptexes out of the index
+    static func isUserDiskMountPoint(_ path: String) -> Bool {
+        let components = URL(fileURLWithPath: path).standardizedFileURL.pathComponents
+        guard components.count == 3, components[1] == "Volumes" else { return false }
+        let name = components[2]
+        return !name.hasPrefix(".") && !name.hasPrefix("com.apple.TimeMachine")
     }
 
     static func applicationsDirectories() -> [URL] {
@@ -267,15 +281,17 @@ enum ExternalVolumeRoots {
 
     static func liveCandidates() -> [Candidate] {
         let fm = FileManager.default
+        let keys: Set<URLResourceKey> = [.volumeIsLocalKey, .volumeIsRootFileSystemKey, .volumeIsBrowsableKey]
         guard let urls = fm.mountedVolumeURLs(
-            includingResourceValuesForKeys: [.volumeIsLocalKey, .volumeIsRootFileSystemKey],
-            options: [.skipHiddenVolumes]
+            includingResourceValuesForKeys: Array(keys),
+            options: []
         ) else { return [] }
 
         return urls.compactMap { url in
-            let values = try? url.resourceValues(forKeys: [.volumeIsLocalKey, .volumeIsRootFileSystemKey])
+            let values = try? url.resourceValues(forKeys: keys)
             if values?.volumeIsRootFileSystem == true { return nil }
             if values?.volumeIsLocal == false { return nil }
+            if values?.volumeIsBrowsable == false, !isUserDiskMountPoint(url.path) { return nil }
             let apps = url.appendingPathComponent("Applications", isDirectory: true)
             var isDir: ObjCBool = false
             let exists = fm.fileExists(atPath: apps.path, isDirectory: &isDir) && isDir.boolValue
@@ -283,7 +299,8 @@ enum ExternalVolumeRoots {
                 url: url,
                 isLocal: values?.volumeIsLocal,
                 isRootFileSystem: values?.volumeIsRootFileSystem,
-                hasApplications: exists
+                hasApplications: exists,
+                isBrowsable: values?.volumeIsBrowsable
             )
         }
     }
