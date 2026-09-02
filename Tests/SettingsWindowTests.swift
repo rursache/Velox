@@ -41,6 +41,13 @@ struct SettingsWindowTests {
         #expect(SearchPanelShowTransition.shouldExitPreview(from: .hidden) == false)
     }
 
+    @Test func staleShowTimerDoesNotRearmHidesOnDeactivate() {
+        #expect(SearchPanelShowTransition.shouldRearmHidesOnDeactivate(scheduled: 3, current: 3, mode: .interactive))
+        #expect(!SearchPanelShowTransition.shouldRearmHidesOnDeactivate(scheduled: 2, current: 3, mode: .interactive))
+        #expect(!SearchPanelShowTransition.shouldRearmHidesOnDeactivate(scheduled: 3, current: 3, mode: .hidden))
+        #expect(!SearchPanelShowTransition.shouldRearmHidesOnDeactivate(scheduled: 3, current: 3, mode: .preview))
+    }
+
     @Test func panelKeysYieldToImeComposition() {
         #expect(SearchPanelKeyRouting.shouldConsumePanelKey(hasMarkedText: false))
         #expect(SearchPanelKeyRouting.shouldConsumePanelKey(hasMarkedText: true) == false)

@@ -43,6 +43,16 @@ enum SearchPanelShowTransition {
     static func shouldRunResultAction(acceptsFocus: Bool) -> Bool {
         acceptsFocus
     }
+
+    /// The deferred re-arm of `hidesOnDeactivate` must belong to the show that scheduled it.
+    /// A stale timer from an earlier show would cut a fast reopen's grace window short
+    static func shouldRearmHidesOnDeactivate(
+        scheduled: UInt64,
+        current: UInt64,
+        mode: SearchPanelMode
+    ) -> Bool {
+        scheduled == current && mode == .interactive
+    }
 }
 
 enum SearchPanelPresentation {
@@ -363,8 +373,13 @@ final class SearchPanelController: NSObject, NSWindowDelegate {
         applyChrome()
         panel.hidesOnDeactivate = false
         ignoreResignUntil = Date().addingTimeInterval(0.25)
+        let showGeneration = restoreGeneration
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.26) { [weak self] in
-            guard let self, self.mode == .interactive else { return }
+            guard let self, SearchPanelShowTransition.shouldRearmHidesOnDeactivate(
+                scheduled: showGeneration,
+                current: self.restoreGeneration,
+                mode: self.mode
+            ) else { return }
             self.panel.hidesOnDeactivate = true
         }
         relayout(preferDefaultPosition: Preferences.shared.customPanelPosition == nil)
