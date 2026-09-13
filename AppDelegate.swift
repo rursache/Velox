@@ -232,7 +232,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @MainActor
     private func refreshFolderWatcher() {
-        appFolderWatcher?.update(paths: AppIndexWatchPolicy.watchPaths(from: AppScanner.scanRoots()))
+        // Nested roots are never watchable, so skip the LaunchServices lookup that finds them
+        appFolderWatcher?.update(
+            paths: AppIndexWatchPolicy.watchPaths(from: AppScanner.scanRoots(nested: []))
+        )
     }
 
     @MainActor

@@ -475,6 +475,89 @@ struct AppIndexTests {
         #expect(!AppIndexWatchPolicy.shouldWatch(
             URL(fileURLWithPath: "/System/Cryptexes/App/System/Applications", isDirectory: true)
         ))
+        #expect(!AppIndexWatchPolicy.shouldWatch(
+            URL(fileURLWithPath: "/Applications/Xcode.app/Contents/Applications", isDirectory: true)
+        ))
+        #expect(!AppIndexWatchPolicy.shouldWatch(
+            URL(fileURLWithPath: "/Volumes/SSD/Applications/Xcode-beta.app/Contents/Applications", isDirectory: true)
+        ))
+    }
+
+    @Test func xcodeNestedRootsSkipMissingFoldersAndNonBundles() {
+        let xcode = URL(fileURLWithPath: "/Applications/Xcode.app", isDirectory: true)
+        let beta = URL(fileURLWithPath: "/Applications/Xcode-beta.app", isDirectory: true)
+        let notABundle = URL(fileURLWithPath: "/Applications/Xcode", isDirectory: true)
+        let present = beta.appendingPathComponent("Contents/Applications", isDirectory: true)
+        let roots = XcodeNestedApps.applicationsDirectories(
+            hosts: [xcode, beta, notABundle],
+            exists: { $0.path == present.path }
+        )
+        #expect(roots.map(\.path) == [present.path])
+    }
+
+    /// hostURLs always appends the fallback, so LaunchServices can hand back the same copy
+    @Test func xcodeNestedRootsDedupeRepeatedHosts() {
+        let xcode = URL(fileURLWithPath: "/Applications/Xcode.app", isDirectory: true)
+        let roots = XcodeNestedApps.applicationsDirectories(
+            hosts: [xcode, xcode],
+            exists: { _ in true }
+        )
+        #expect(roots.count == XcodeNestedApps.nestedSubpaths.count)
+        #expect(Set(roots.map(\.path)).count == roots.count)
+    }
+
+    @Test func xcodeHostsFallBackToTheStandardPathWhenLaunchServicesIsEmpty() {
+        let hosts = XcodeNestedApps.hostURLs().map { $0.standardizedFileURL.path }
+        #expect(hosts.contains("/Applications/Xcode.app"))
+        #expect(hosts.allSatisfy { $0.hasSuffix(".app") })
+        #expect(XcodeNestedApps.fallbackHosts.map(\.standardizedFileURL.path) == ["/Applications/Xcode.app"])
+    }
+
+    @Test func scanRootsIncludeXcodeNestedApplications() {
+        let nested = URL(fileURLWithPath: "/Applications/Xcode.app/Contents/Applications", isDirectory: true)
+        let roots = AppScanner.scanRoots(external: [], nested: [nested]).map(\.path)
+        #expect(roots.contains(nested.path))
+    }
+
+    @Test func folderWatcherNeverAsksForNestedRoots() {
+        let nested = URL(fileURLWithPath: "/Applications/Xcode.app/Contents/Applications", isDirectory: true)
+        let paths = AppIndexWatchPolicy.watchPaths(from: AppScanner.scanRoots(nested: [nested]), exists: { _ in true })
+        #expect(!paths.contains(nested.path))
+    }
+
+    /// Real directory tree shaped like Xcode so the fix is verified without an Xcode install
+    @Test func nestedRootsAreDiscoveredOnDisk() throws {
+        let fm = FileManager.default
+        let host = fm.temporaryDirectory
+            .appendingPathComponent("VeloxXcodeFixture-\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent("Xcode.app", isDirectory: true)
+        let nested = host.appendingPathComponent("Contents/Applications", isDirectory: true)
+        try fm.createDirectory(at: nested, withIntermediateDirectories: true)
+        try fm.createDirectory(
+            at: host.appendingPathComponent("Contents/Developer/Toolchains", isDirectory: true),
+            withIntermediateDirectories: true
+        )
+        defer { try? fm.removeItem(at: host.deletingLastPathComponent()) }
+
+        let roots = XcodeNestedApps.applicationsDirectories(hosts: [host])
+        #expect(roots.map { $0.resolvingSymlinksInPath().path } == [nested.resolvingSymlinksInPath().path])
+        #expect(AppIndexWatchPolicy.watchPaths(from: roots, exists: { _ in true }).isEmpty)
+    }
+
+    /// Icon Composer and friends live inside Xcode.app, which the walker never descends into
+    @Test func scanFindsAppsNestedInsideXcode() {
+        let nested = "/Applications/Xcode.app/Contents/Applications"
+        var isDir: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: nested, isDirectory: &isDir), isDir.boolValue else {
+            return
+        }
+        #expect(AppScanner.scanRoots().map(\.path).contains(nested))
+
+        let apps = AppScanner.scan()
+        let hits = apps.filter { $0.path.hasPrefix(nested + "/") }
+        #expect(!hits.isEmpty)
+        // Nested Xcode apps are not under /System, so they stay visible without includeSystemApps
+        #expect(hits.allSatisfy { !$0.isSystem })
     }
 
     @Test func watchPathsSkipMissingAndDedup() {

@@ -306,6 +306,46 @@ enum ExternalVolumeRoots {
     }
 }
 
+/// Xcode ships extra apps inside its own bundle (Icon Composer, Instruments, Create ML).
+/// `AppScanner.walk` never descends into a `.app`, so those folders are added as scan roots
+enum XcodeNestedApps {
+    static let bundleIdentifier = "com.apple.dt.Xcode"
+
+    static let nestedSubpaths = ["Contents/Applications"]
+
+    static let fallbackHosts = [URL(fileURLWithPath: "/Applications/Xcode.app", isDirectory: true)]
+
+    static func applicationsDirectories(
+        hosts: [URL],
+        exists: (URL) -> Bool = { url in
+            var isDir: ObjCBool = false
+            return FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir)
+                && isDir.boolValue
+        }
+    ) -> [URL] {
+        var seen = Set<String>()
+        var roots: [URL] = []
+        for host in hosts where host.pathExtension == "app" {
+            for subpath in nestedSubpaths {
+                let url = host.appendingPathComponent(subpath, isDirectory: true)
+                guard exists(url) else { continue }
+                guard seen.insert(url.resolvingSymlinksInPath().path).inserted else { continue }
+                roots.append(url)
+            }
+        }
+        return roots
+    }
+
+    /// LaunchServices finds Xcode wherever it lives (beta builds, Xcodes-managed copies)
+    static func hostURLs() -> [URL] {
+        NSWorkspace.shared.urlsForApplications(withBundleIdentifier: bundleIdentifier) + fallbackHosts
+    }
+
+    static func applicationsDirectories() -> [URL] {
+        applicationsDirectories(hosts: hostURLs())
+    }
+}
+
 enum VolumeWatcher {
     static let notifications: [NSNotification.Name] = [
         NSWorkspace.didMountNotification,
@@ -334,7 +374,8 @@ enum AppScanner {
     ]
 
     static func scanRoots(
-        external: [URL] = ExternalVolumeRoots.applicationsDirectories()
+        external: [URL] = ExternalVolumeRoots.applicationsDirectories(),
+        nested: [URL] = XcodeNestedApps.applicationsDirectories()
     ) -> [URL] {
         var urls: [URL] = [
             URL(fileURLWithPath: "/Applications", isDirectory: true),
@@ -355,6 +396,7 @@ enum AppScanner {
             urls.append(system)
         }
         urls.append(contentsOf: external)
+        urls.append(contentsOf: nested)
         var seen = Set<String>()
         return urls.filter { seen.insert($0.resolvingSymlinksInPath().path).inserted }
     }

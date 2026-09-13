@@ -13,6 +13,9 @@ enum AppIndexWatchPolicy {
                 && !path.hasPrefix("/System/Library/")
                 && !path.hasPrefix("/System/Volumes/Preboot/")
                 && !path.contains("/Cryptexes/")
+                // Nested roots like Xcode.app/Contents/Applications only change when the host
+                // app is replaced, which the parent Applications folder already reports
+                && !path.contains(".app/Contents/")
         }
     }
 

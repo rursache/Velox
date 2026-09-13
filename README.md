@@ -14,7 +14,7 @@ brew tap rursache/tap && brew trust rursache/tap && brew install --cask velox
 
 ## Features
 
-- Instant fuzzy app search (`gc` → Google Chrome) across `/Applications`, `~/Applications`, system apps, and `/Applications` on attached external disks
+- Instant fuzzy app search (`gc` → Google Chrome) across `/Applications`, `~/Applications`, system apps, apps bundled inside Xcode (Icon Composer, Instruments), and `/Applications` on attached external disks
 - Calculator and currency conversion (`12*8+4`, `40 is 45% of`, `$21k to EUR`), both **on** by default. Rates refresh on launch and every hour
 - Remappable hotkey (default **⌥Space**)
 - Bar themes: Glass, Clear, Midnight, Snow, Olive, Harbor, Orchid, Parchment, plus a separate result highlight and live corner radius
